@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import json
 import os
+from twilio.rest import Client
 
 # ─────────────────────────────────────────────
 #  CONFIG & STYLING
@@ -100,7 +101,40 @@ st.markdown("""
 
 
 # ─────────────────────────────────────────────
-#  DATA STORAGE (JSON file as simple database)
+#  TWILIO WHATSAPP NOTIFICATION
+# ─────────────────────────────────────────────
+TWILIO_SID = "AC0abbefbc9dbbe05400485aee45d933c7"
+TWILIO_TOKEN = "5ee79e88bfe857957d9ed4753fb50214"
+TWILIO_FROM = "whatsapp:+14155238886"
+NOTIFY_NUMBER = "whatsapp:+2349032803609"
+
+def send_whatsapp_notification(order):
+    try:
+        client = Client(TWILIO_SID, TWILIO_TOKEN)
+        message = f"""🍽️ NEW ORDER — Jade's Cuisine
+
+Client: {order['client_name']}
+Phone: {order['phone']}
+Event: {order['event_type']}
+Date: {order['event_date']}
+Guests: {order['guests']}
+Location: {order['location']}
+Special Requests: {order['special_requests'] or 'None'}
+
+Total: ₦{order['total']:,.0f}
+Booking Ref: {order['id']}"""
+
+        client.messages.create(
+            body=message,
+            from_=TWILIO_FROM,
+            to=NOTIFY_NUMBER
+        )
+    except Exception as e:
+        pass
+
+
+# ─────────────────────────────────────────────
+#  DATA STORAGE
 # ─────────────────────────────────────────────
 DATA_FILE = "orders.json"
 
@@ -227,6 +261,8 @@ if page == "📋 Place an Order":
                 orders.append(new_order)
                 save_orders(orders)
 
+                send_whatsapp_notification(new_order)
+
                 st.success(f"✅ Order submitted successfully! Your booking reference is *{new_order['id']}*")
                 st.markdown(f"""
                 <div class="quote-box">
@@ -304,7 +340,6 @@ elif page == "📊 Admin Dashboard":
     if not orders:
         st.info("No orders yet. Orders placed by clients will appear here.")
     else:
-        # ── Summary metrics ──────────────────────────
         total_orders = len(orders)
         total_revenue = sum(o["total"] for o in orders)
         upcoming = [o for o in orders if (datetime.strptime(o["event_date"], "%Y-%m-%d").date() - date.today()).days >= 0]
@@ -317,8 +352,6 @@ elif page == "📊 Admin Dashboard":
         m4.metric("🔴 Urgent (≤3 days)", len(urgent_orders))
 
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
-
-        # ── Order list ───────────────────────────────
         st.markdown('<p class="section-label">Order List — Sorted by Event Date</p>', unsafe_allow_html=True)
 
         sorted_orders = sorted(orders, key=lambda x: x["event_date"])
