@@ -103,10 +103,10 @@ st.markdown("""
 # ─────────────────────────────────────────────
 #  TWILIO WHATSAPP NOTIFICATION
 # ─────────────────────────────────────────────
-TWILIO_SID = "AC0abbefbc9dbbe05400485aee45d933c7"
-TWILIO_TOKEN = "5ee79e88bfe857957d9ed4753fb50214"
+TWILIO_SID = st.secrets["TWILIO_SID"]
+TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
 TWILIO_FROM = "whatsapp:+14155238886"
-NOTIFY_NUMBER = "whatsapp:+2349032803609"
+NOTIFY_NUMBER = st.secrets["NOTIFY_NUMBER"]
 
 def send_whatsapp_notification(order):
     try:
