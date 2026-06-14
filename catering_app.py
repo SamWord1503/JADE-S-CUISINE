@@ -8,7 +8,7 @@ import os
 #  CONFIG & STYLING
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="Bosslady Catering",
+    page_title="Jade's Cuisine",
     page_icon="🍽️",
     layout="wide"
 )
@@ -154,7 +154,7 @@ def urgency(event_date_str):
 # ─────────────────────────────────────────────
 col_logo, col_nav = st.columns([3, 2])
 with col_logo:
-    st.markdown('<p class="brand-title">🍽️ Bosslady Catering</p>', unsafe_allow_html=True)
+    st.markdown('<p class="brand-title">🍽️ Jade\'s Cuisine</p>', unsafe_allow_html=True)
     st.markdown('<p class="brand-sub">PREMIUM CATERING SERVICES · NIGERIA</p>', unsafe_allow_html=True)
 
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
@@ -292,6 +292,12 @@ elif page == "📊 Admin Dashboard":
 
     st.markdown('<p class="section-label">Admin View</p>', unsafe_allow_html=True)
     st.markdown("### All Orders")
+
+    password = st.text_input("Enter admin password", type="password")
+
+    if password != "Jade2026":
+        st.warning("Enter the correct password to access the dashboard.")
+        st.stop()
 
     orders = load_orders()
 
