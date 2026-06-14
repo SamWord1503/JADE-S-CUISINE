@@ -197,7 +197,7 @@ st.markdown('<hr class="divider">', unsafe_allow_html=True)
 #  NAVIGATION
 # ─────────────────────────────────────────────
 page = st.radio(
-    "",
+    "Navigation",
     ["📋 Place an Order", "💰 Get a Quote", "📊 Admin Dashboard"],
     horizontal=True,
     label_visibility="collapsed"
