@@ -1,115 +1,333 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 import json
 import os
 from twilio.rest import Client
 
 # ─────────────────────────────────────────────
-#  CONFIG & STYLING
+#  PAGE CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
     page_title="Jade's Cuisine",
     page_icon="🍽️",
-    layout="wide"
+    layout="centered"
 )
 
+# ─────────────────────────────────────────────
+#  MOBILE-FIRST STYLING
+# ─────────────────────────────────────────────
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
 
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-        background-color: #FDFAF6;
-        color: #1A1A1A;
-    }
-    .brand-title {
-        font-family: 'Playfair Display', serif;
-        font-size: 2.6rem;
-        color: #B5451B;
-        margin-bottom: 0;
-    }
-    .brand-sub {
-        font-size: 0.95rem;
-        color: #888;
-        margin-top: 0;
-        letter-spacing: 0.05em;
-    }
-    .section-label {
-        font-size: 0.75rem;
-        font-weight: 500;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #B5451B;
-        margin-bottom: 0.3rem;
-    }
-    .quote-box {
-        background: #fff;
-        border-left: 4px solid #B5451B;
-        padding: 1.5rem 2rem;
-        border-radius: 4px;
-        margin-top: 1rem;
-    }
-    .quote-total {
-        font-family: 'Playfair Display', serif;
-        font-size: 2rem;
-        color: #B5451B;
-    }
-    .urgent-badge {
-        background: #FEE2E2;
-        color: #B91C1C;
-        padding: 2px 10px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    .soon-badge {
-        background: #FEF3C7;
-        color: #92400E;
-        padding: 2px 10px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    .ok-badge {
-        background: #D1FAE5;
-        color: #065F46;
-        padding: 2px 10px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    .divider {
-        border: none;
-        border-top: 1px solid #E5E0D8;
-        margin: 1.5rem 0;
-    }
-    div[data-testid="stButton"] > button {
-        background-color: #B5451B;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 0.6rem 2rem;
-        font-weight: 500;
-        font-size: 0.95rem;
-    }
-    div[data-testid="stButton"] > button:hover {
-        background-color: #8F3515;
-    }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+    background-color: #0D0D0D;
+    color: #F0EBE1;
+}
+
+/* Hide streamlit default elements */
+#MainMenu, footer, header { visibility: hidden; }
+.block-container { padding: 0 1rem 2rem 1rem !important; max-width: 480px !important; margin: 0 auto !important; }
+
+/* ── HERO ── */
+.hero {
+    background: linear-gradient(160deg, #1A1208 0%, #0D0D0D 60%);
+    border-bottom: 1px solid #2A2218;
+    padding: 2.5rem 1.5rem 2rem;
+    text-align: center;
+    margin: 0 -1rem 2rem;
+}
+.hero-badge {
+    display: inline-block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #C9A84C;
+    border: 1px solid #C9A84C44;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 1rem;
+}
+.hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #F0EBE1;
+    line-height: 1.1;
+    margin-bottom: 0.4rem;
+}
+.hero-title span { color: #C9A84C; }
+.hero-sub {
+    font-size: 0.85rem;
+    color: #888;
+    letter-spacing: 0.05em;
+}
+
+/* ── NAV TABS ── */
+.nav-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    background: #141414;
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid #222;
+}
+.nav-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 6px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #666;
+    background: transparent;
+    border: none;
+}
+.nav-btn.active {
+    background: #C9A84C;
+    color: #0D0D0D;
+}
+
+/* ── CARDS ── */
+.card {
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+.card-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #C9A84C;
+    margin-bottom: 0.75rem;
+}
+.card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #F0EBE1;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+}
+.card-sub {
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* ── FORM INPUTS ── */
+.stTextInput input, .stTextArea textarea, .stSelectbox select {
+    background: #1A1A1A !important;
+    border: 1px solid #2A2A2A !important;
+    border-radius: 10px !important;
+    color: #F0EBE1 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.95rem !important;
+    padding: 0.75rem 1rem !important;
+}
+.stTextInput input:focus, .stTextArea textarea:focus {
+    border-color: #C9A84C !important;
+    box-shadow: 0 0 0 2px #C9A84C22 !important;
+}
+label { color: #AAA !important; font-size: 0.8rem !important; font-weight: 500 !important; }
+
+/* ── BUTTON ── */
+div[data-testid="stButton"] > button {
+    width: 100%;
+    background: #C9A84C;
+    color: #0D0D0D;
+    border: none;
+    border-radius: 12px;
+    padding: 0.9rem 2rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    margin-top: 0.5rem;
+    transition: all 0.2s;
+}
+div[data-testid="stButton"] > button:hover {
+    background: #B8933A;
+    transform: translateY(-1px);
+}
+
+/* ── QUOTE BOX ── */
+.quote-result {
+    background: linear-gradient(135deg, #1A1208, #141414);
+    border: 1px solid #C9A84C44;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+.quote-amount {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #C9A84C;
+    line-height: 1;
+    margin: 0.5rem 0;
+}
+.quote-detail {
+    font-size: 0.8rem;
+    color: #666;
+    line-height: 1.8;
+}
+.discount-tag {
+    display: inline-block;
+    background: #C9A84C22;
+    color: #C9A84C;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-top: 0.5rem;
+}
+
+/* ── SUCCESS BOX ── */
+.success-box {
+    background: #0A1A0A;
+    border: 1px solid #2A5A2A;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    text-align: center;
+}
+.success-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+.success-ref {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    color: #4CAF50;
+    margin-bottom: 0.3rem;
+}
+.success-msg { font-size: 0.82rem; color: #666; }
+
+/* ── PRICE TABLE ── */
+.price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #1E1E1E;
+    font-size: 0.88rem;
+}
+.price-row:last-child { border-bottom: none; }
+.price-event { color: #CCC; }
+.price-amount { color: #C9A84C; font-weight: 600; }
+
+/* ── DISCOUNT TIERS ── */
+.tier-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    font-size: 0.82rem;
+    color: #666;
+    border-bottom: 1px solid #1A1A1A;
+}
+.tier-row:last-child { border-bottom: none; }
+
+/* ── METRIC CARDS ── */
+.metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.metric-card {
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+}
+.metric-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #C9A84C;
+}
+.metric-label { font-size: 0.72rem; color: #666; margin-top: 2px; }
+
+/* ── ORDER CARD ── */
+.order-card {
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 14px;
+    padding: 1.2rem;
+    margin-bottom: 0.75rem;
+}
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+.order-ref { font-size: 0.72rem; color: #555; font-weight: 600; letter-spacing: 0.1em; }
+.order-name { font-size: 1rem; font-weight: 600; color: #F0EBE1; margin-top: 2px; }
+.order-event { font-size: 0.8rem; color: #888; margin-top: 1px; }
+.badge-urgent { background: #3A0A0A; color: #FF6B6B; font-size: 0.68rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #FF6B6B44; }
+.badge-soon { background: #2A1E0A; color: #FFB347; font-size: 0.68rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #FFB34744; }
+.badge-ok { background: #0A1E0A; color: #69DB7C; font-size: 0.68rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #69DB7C44; }
+.order-details { font-size: 0.8rem; color: #666; line-height: 1.8; }
+.order-total { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; color: #C9A84C; font-weight: 700; margin-top: 0.5rem; }
+
+/* ── CONTACT & BANK ── */
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid #1E1E1E;
+    font-size: 0.88rem;
+}
+.contact-item:last-child { border-bottom: none; }
+.contact-icon { font-size: 1.2rem; width: 2rem; text-align: center; }
+.contact-label { font-size: 0.68rem; color: #555; text-transform: uppercase; letter-spacing: 0.1em; }
+.contact-value { color: #CCC; margin-top: 1px; }
+
+/* ── FOOTER ── */
+.footer {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+    font-size: 0.72rem;
+    color: #333;
+    border-top: 1px solid #1A1A1A;
+    margin-top: 2rem;
+}
+
+/* ── PASSWORD ── */
+.stTextInput input[type="password"] {
+    background: #1A1A1A !important;
+    border: 1px solid #2A2A2A !important;
+    border-radius: 10px !important;
+    color: #F0EBE1 !important;
+}
+
+/* Radio hide */
+div[data-testid="stRadio"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
-#  TWILIO WHATSAPP NOTIFICATION
+#  TWILIO
 # ─────────────────────────────────────────────
-TWILIO_SID = st.secrets["TWILIO_SID"]
-TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
-TWILIO_FROM = "whatsapp:+14155238886"
-NOTIFY_NUMBER = st.secrets["NOTIFY_NUMBER"]
-
 def send_whatsapp_notification(order):
     try:
+        TWILIO_SID = st.secrets["TWILIO_SID"]
+        TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
+        NOTIFY_NUMBER = st.secrets["NOTIFY_NUMBER"]
         client = Client(TWILIO_SID, TWILIO_TOKEN)
         message = f"""🍽️ NEW ORDER — Jade's Cuisine
 
@@ -122,19 +340,14 @@ Location: {order['location']}
 Special Requests: {order['special_requests'] or 'None'}
 
 Total: ₦{order['total']:,.0f}
-Booking Ref: {order['id']}"""
-
-        client.messages.create(
-            body=message,
-            from_=TWILIO_FROM,
-            to=NOTIFY_NUMBER
-        )
-    except Exception as e:
+Ref: {order['id']}"""
+        client.messages.create(body=message, from_="whatsapp:+14155238886", to=NOTIFY_NUMBER)
+    except:
         pass
 
 
 # ─────────────────────────────────────────────
-#  DATA STORAGE
+#  DATA
 # ─────────────────────────────────────────────
 DATA_FILE = "orders.json"
 
@@ -148,97 +361,94 @@ def save_orders(orders):
     with open(DATA_FILE, "w") as f:
         json.dump(orders, f, indent=2)
 
-
-# ─────────────────────────────────────────────
-#  PRICING LOGIC
-# ─────────────────────────────────────────────
 PRICING = {
-    "Wedding":          5000,
-    "Birthday Party":   3500,
-    "Corporate Event":  6000,
-    "Burial/Funeral":   2500,
+    "Wedding": 5000,
+    "Birthday Party": 3500,
+    "Corporate Event": 6000,
+    "Burial/Funeral": 2500,
 }
 
 def calculate_price(event_type, guests):
     base = PRICING[event_type]
     subtotal = base * guests
-    if guests >= 100:
-        discount = 0.10
-    elif guests >= 50:
-        discount = 0.05
-    else:
-        discount = 0.0
+    discount = 0.10 if guests >= 100 else 0.05 if guests >= 50 else 0.0
     discount_amount = subtotal * discount
-    total = subtotal - discount_amount
-    return subtotal, discount, discount_amount, total
+    return subtotal, discount, discount_amount, subtotal - discount_amount
 
 def urgency(event_date_str):
-    event_date = datetime.strptime(event_date_str, "%Y-%m-%d").date()
-    days_left = (event_date - date.today()).days
+    days_left = (datetime.strptime(event_date_str, "%Y-%m-%d").date() - date.today()).days
     if days_left <= 3:
         return "urgent", days_left
     elif days_left <= 7:
         return "soon", days_left
-    else:
-        return "ok", days_left
+    return "ok", days_left
 
 
 # ─────────────────────────────────────────────
-#  HEADER
+#  SESSION STATE FOR NAV
 # ─────────────────────────────────────────────
-col_logo, col_nav = st.columns([3, 2])
-with col_logo:
-    st.markdown('<p class="brand-title">🍽️ Jade\'s Cuisine</p>', unsafe_allow_html=True)
-    st.markdown('<p class="brand-sub">PREMIUM CATERING SERVICES · NIGERIA</p>', unsafe_allow_html=True)
+if "page" not in st.session_state:
+    st.session_state.page = "order"
 
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-#  NAVIGATION
+#  HERO
 # ─────────────────────────────────────────────
-page = st.radio(
-    "Navigation",
-    ["📋 Place an Order", "💰 Get a Quote", "📊 Admin Dashboard"],
-    horizontal=True,
-    label_visibility="collapsed"
-)
+st.markdown("""
+<div class="hero">
+    <div class="hero-badge">Premium Catering · Ibadan, Oyo State</div>
+    <div class="hero-title">Jade's<br><span>Cuisine</span></div>
+    <div class="hero-sub">Exceptional food. Unforgettable events.</div>
+</div>
+""", unsafe_allow_html=True)
 
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+#  NAV BUTTONS
+# ─────────────────────────────────────────────
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("📋 Book Event", key="nav_order"):
+        st.session_state.page = "order"
+with col2:
+    if st.button("💰 Get Quote", key="nav_quote"):
+        st.session_state.page = "quote"
+with col3:
+    if st.button("📊 Dashboard", key="nav_admin"):
+        st.session_state.page = "admin"
+
+st.markdown("---")
+page = st.session_state.page
 
 
 # ═════════════════════════════════════════════
-#  PAGE 1 — PLACE AN ORDER
+#  PAGE 1 — BOOK EVENT
 # ═════════════════════════════════════════════
-if page == "📋 Place an Order":
-
-    st.markdown('<p class="section-label">New Booking</p>', unsafe_allow_html=True)
-    st.markdown("### Tell us about your event")
-    st.write("Fill in the details below and we'll get back to you with a confirmation.")
+if page == "order":
+    st.markdown("""
+    <div class="card">
+        <div class="card-label">New Booking</div>
+        <div class="card-title">Tell us about your event</div>
+        <div class="card-sub">Fill in your details below and we'll confirm your booking.</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.form("order_form"):
-        col1, col2 = st.columns(2)
-
-        with col1:
-            client_name = st.text_input("Full Name *")
-            phone = st.text_input("Phone Number *")
-            email = st.text_input("Email Address (optional)")
-
-        with col2:
-            event_type = st.selectbox("Type of Event *", list(PRICING.keys()))
-            event_date = st.date_input("Event Date *", min_value=date.today())
-            guests = st.number_input("Number of Guests *", min_value=1, max_value=5000, value=50, step=10)
-
-        location = st.text_input("Event Location / Venue *")
-        special_requests = st.text_area("Special Requests or Notes", placeholder="e.g. vegetarian options, specific dishes, decorations...")
-
-        submitted = st.form_submit_button("Submit Order")
+        client_name = st.text_input("Full Name *")
+        phone = st.text_input("Phone Number *")
+        email = st.text_input("Email Address (optional)")
+        event_type = st.selectbox("Type of Event *", list(PRICING.keys()))
+        event_date = st.date_input("Event Date *", min_value=date.today())
+        guests = st.number_input("Number of Guests *", min_value=1, max_value=5000, value=50, step=10)
+        location = st.text_input("Event Venue / Location *")
+        special_requests = st.text_area("Special Requests", placeholder="e.g. Jollof rice, Fried rice, Chicken, Beef...")
+        submitted = st.form_submit_button("Submit Booking")
 
         if submitted:
             if not client_name or not phone or not location:
-                st.error("Please fill in all required fields marked with *")
+                st.error("Please fill in all required fields.")
             else:
                 subtotal, discount_rate, discount_amt, total = calculate_price(event_type, guests)
-
                 new_order = {
                     "id": f"ORD{len(load_orders()) + 1:04d}",
                     "client_name": client_name,
@@ -256,80 +466,126 @@ if page == "📋 Place an Order":
                     "status": "Pending",
                     "booked_on": str(date.today())
                 }
-
                 orders = load_orders()
                 orders.append(new_order)
                 save_orders(orders)
-
                 send_whatsapp_notification(new_order)
 
-                st.success(f"✅ Order submitted successfully! Your booking reference is *{new_order['id']}*")
                 st.markdown(f"""
-                <div class="quote-box">
-                    <p class="section-label">Order Summary</p>
-                    <b>{client_name}</b> — {event_type}<br>
-                    📅 {event_date.strftime('%d %B %Y')} &nbsp;|&nbsp; 👥 {guests} guests &nbsp;|&nbsp; 📍 {location}<br><br>
-                    <span class="quote-total">₦{total:,.0f}</span>
-                    {"<br><small style='color:#888'>Includes " + str(int(discount_rate*100)) + "% loyalty discount</small>" if discount_rate > 0 else ""}
+                <div class="success-box">
+                    <div class="success-icon">✅</div>
+                    <div class="success-ref">{new_order['id']}</div>
+                    <div class="success-msg">Booking received! We'll contact you shortly to confirm.<br><br>
+                    <b style="color:#C9A84C">Total: ₦{total:,.0f}</b>
+                    {"<br><small style='color:#555'>10% discount applied</small>" if discount_rate == 0.10 else "<br><small style='color:#555'>5% discount applied</small>" if discount_rate == 0.05 else ""}
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
 
 
 # ═════════════════════════════════════════════
-#  PAGE 2 — GET A QUOTE
+#  PAGE 2 — GET QUOTE
 # ═════════════════════════════════════════════
-elif page == "💰 Get a Quote":
+elif page == "quote":
+    st.markdown("""
+    <div class="card">
+        <div class="card-label">Pricing Calculator</div>
+        <div class="card-title">How much will it cost?</div>
+        <div class="card-sub">Get an instant estimate for your event.</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown('<p class="section-label">Pricing Calculator</p>', unsafe_allow_html=True)
-    st.markdown("### How much will your event cost?")
-    st.write("Select your event type and guest count to get an instant price estimate.")
+    q_event = st.selectbox("Event Type", list(PRICING.keys()))
+    q_guests = st.number_input("Number of Guests", min_value=1, max_value=5000, value=100, step=10)
 
-    col1, col2 = st.columns([1, 1])
-
-    with col1:
-        q_event = st.selectbox("Event Type", list(PRICING.keys()))
-        q_guests = st.number_input("Number of Guests", min_value=1, max_value=5000, value=100, step=10)
-
-        if st.button("Calculate Price"):
-            subtotal, discount_rate, discount_amt, total = calculate_price(q_event, q_guests)
-
-            st.markdown(f"""
-            <div class="quote-box">
-                <p class="section-label">Your Estimate</p>
-                <b>{q_event}</b> · {q_guests} guests<br><br>
-                Base price: ₦{PRICING[q_event]:,} per head<br>
-                Subtotal: ₦{subtotal:,.0f}<br>
-                {"Discount (" + str(int(discount_rate*100)) + "%): <span style='color:#065F46'>− ₦" + f"{discount_amt:,.0f}</span><br>" if discount_rate > 0 else ""}
-                <hr class="divider">
-                <span class="quote-total">Total: ₦{total:,.0f}</span>
-                <br><br>
-                <small style="color:#888">This is an estimate. Final pricing confirmed after consultation.</small>
+    if st.button("Calculate Price"):
+        subtotal, discount_rate, discount_amt, total = calculate_price(q_event, q_guests)
+        discount_text = f'<div class="discount-tag">🎉 {int(discount_rate*100)}% volume discount applied — you save ₦{discount_amt:,.0f}</div>' if discount_rate > 0 else ""
+        st.markdown(f"""
+        <div class="quote-result">
+            <div style="font-size:0.72rem;color:#555;letter-spacing:0.1em;text-transform:uppercase;">Your Estimate</div>
+            <div class="quote-amount">₦{total:,.0f}</div>
+            <div class="quote-detail">
+                {q_event} · {q_guests} guests<br>
+                ₦{PRICING[q_event]:,} per head
             </div>
-            """, unsafe_allow_html=True)
+            {discount_text}
+        </div>
+        """, unsafe_allow_html=True)
 
-    with col2:
-        st.markdown('<p class="section-label">Price Guide</p>', unsafe_allow_html=True)
-        price_data = {
-            "Event Type": list(PRICING.keys()),
-            "Price Per Head": [f"₦{v:,}" for v in PRICING.values()]
-        }
-        st.table(pd.DataFrame(price_data))
-        st.markdown("""
-        *Volume Discounts:*
-        - 50–99 guests → 5% off
-        - 100+ guests → 10% off
-        """)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+        <div class="card-label">Price Guide</div>
+    """, unsafe_allow_html=True)
+
+    for event, price in PRICING.items():
+        st.markdown(f"""
+        <div class="price-row">
+            <span class="price-event">{event}</span>
+            <span class="price-amount">₦{price:,}/head</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <br>
+        <div class="card-label">Volume Discounts</div>
+        <div class="tier-row"><span>50 – 99 guests</span><span style="color:#C9A84C">5% off</span></div>
+        <div class="tier-row"><span>100+ guests</span><span style="color:#C9A84C">10% off</span></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Contact & Bank
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="card">
+        <div class="card-label">Contact & Payment</div>
+        <div class="contact-item">
+            <div class="contact-icon">📞</div>
+            <div>
+                <div class="contact-label">Phone / WhatsApp</div>
+                <div class="contact-value">09032803609</div>
+            </div>
+        </div>
+        <div class="contact-item">
+            <div class="contact-icon">📘</div>
+            <div>
+                <div class="contact-label">Facebook</div>
+                <div class="contact-value">Jade's Cuisine</div>
+            </div>
+        </div>
+        <div class="contact-item">
+            <div class="contact-icon">📍</div>
+            <div>
+                <div class="contact-label">Location</div>
+                <div class="contact-value">Ibadan, Oyo State</div>
+            </div>
+        </div>
+        <div class="contact-item">
+            <div class="contact-icon">🏦</div>
+            <div>
+                <div class="contact-label">Bank — Opay</div>
+                <div class="contact-value">9032803609</div>
+                <div style="font-size:0.78rem;color:#555">Iyiola Samuel Olatunji</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ═════════════════════════════════════════════
 #  PAGE 3 — ADMIN DASHBOARD
 # ═════════════════════════════════════════════
-elif page == "📊 Admin Dashboard":
+elif page == "admin":
+    st.markdown("""
+    <div class="card">
+        <div class="card-label">Admin Access</div>
+        <div class="card-title">Dashboard</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown('<p class="section-label">Admin View</p>', unsafe_allow_html=True)
-    st.markdown("### All Orders")
-
-    password = st.text_input("Enter admin password", type="password")
+    password = st.text_input("Enter password", type="password", placeholder="Admin password")
 
     if password != "Jade2026":
         st.warning("Enter the correct password to access the dashboard.")
@@ -338,47 +594,72 @@ elif page == "📊 Admin Dashboard":
     orders = load_orders()
 
     if not orders:
-        st.info("No orders yet. Orders placed by clients will appear here.")
+        st.info("No orders yet.")
     else:
         total_orders = len(orders)
         total_revenue = sum(o["total"] for o in orders)
         upcoming = [o for o in orders if (datetime.strptime(o["event_date"], "%Y-%m-%d").date() - date.today()).days >= 0]
-        urgent_orders = [o for o in upcoming if (datetime.strptime(o["event_date"], "%Y-%m-%d").date() - date.today()).days <= 3]
+        urgent_count = len([o for o in upcoming if (datetime.strptime(o["event_date"], "%Y-%m-%d").date() - date.today()).days <= 3])
 
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Orders", total_orders)
-        m2.metric("Total Revenue", f"₦{total_revenue:,.0f}")
-        m3.metric("Upcoming Events", len(upcoming))
-        m4.metric("🔴 Urgent (≤3 days)", len(urgent_orders))
+        st.markdown(f"""
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-value">{total_orders}</div>
+                <div class="metric-label">Total Orders</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">₦{total_revenue/1000:.0f}k</div>
+                <div class="metric-label">Total Revenue</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{len(upcoming)}</div>
+                <div class="metric-label">Upcoming</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color:#FF6B6B">{urgent_count}</div>
+                <div class="metric-label">Urgent (≤3 days)</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown('<hr class="divider">', unsafe_allow_html=True)
-        st.markdown('<p class="section-label">Order List — Sorted by Event Date</p>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.72rem;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;">All Orders — Sorted by Date</div>', unsafe_allow_html=True)
 
         sorted_orders = sorted(orders, key=lambda x: x["event_date"])
 
         for o in sorted_orders:
             status, days_left = urgency(o["event_date"])
-
             if status == "urgent":
-                badge = f'<span class="urgent-badge">🔴 In {days_left} day(s) — URGENT</span>'
+                badge = f'<span class="badge-urgent">🔴 {days_left}d — URGENT</span>'
             elif status == "soon":
-                badge = f'<span class="soon-badge">🟡 In {days_left} days</span>'
+                badge = f'<span class="badge-soon">🟡 In {days_left} days</span>'
             else:
-                badge = f'<span class="ok-badge">🟢 In {days_left} days</span>'
+                badge = f'<span class="badge-ok">🟢 In {days_left} days</span>'
 
-            with st.expander(f"{o['id']} · {o['client_name']} · {o['event_type']} · {o['event_date']}"):
+            with st.expander(f"{o['id']} · {o['client_name']} · {o['event_date']}"):
                 st.markdown(f"""
-                {badge}
-                <br><br>
-                <b>Client:</b> {o['client_name']}<br>
-                <b>Phone:</b> {o['phone']}<br>
-                <b>Email:</b> {o['email'] or '—'}<br>
-                <b>Event:</b> {o['event_type']}<br>
-                <b>Date:</b> {o['event_date']}<br>
-                <b>Guests:</b> {o['guests']}<br>
-                <b>Location:</b> {o['location']}<br>
-                <b>Special Requests:</b> {o['special_requests'] or '—'}<br><br>
-                <b>Subtotal:</b> ₦{o['subtotal']:,.0f}<br>
-                {"<b>Discount:</b> " + str(int(o['discount_rate']*100)) + "% (−₦" + f"{o['discount_amount']:,.0f})<br>" if o['discount_rate'] > 0 else ""}
-                <b style="font-size:1.1rem">Total: ₦{o['total']:,.0f}</b>
+                <div style="padding:0.5rem 0">
+                    {badge}
+                    <div class="order-details" style="margin-top:0.75rem">
+                        <b style="color:#AAA">Client:</b> {o['client_name']}<br>
+                        <b style="color:#AAA">Phone:</b> {o['phone']}<br>
+                        <b style="color:#AAA">Email:</b> {o['email'] or '—'}<br>
+                        <b style="color:#AAA">Event:</b> {o['event_type']}<br>
+                        <b style="color:#AAA">Date:</b> {o['event_date']}<br>
+                        <b style="color:#AAA">Guests:</b> {o['guests']}<br>
+                        <b style="color:#AAA">Venue:</b> {o['location']}<br>
+                        <b style="color:#AAA">Requests:</b> {o['special_requests'] or '—'}
+                    </div>
+                    <div class="order-total">₦{o['total']:,.0f}</div>
+                    {"<div style='font-size:0.72rem;color:#555'>Includes " + str(int(o['discount_rate']*100)) + "% discount</div>" if o['discount_rate'] > 0 else ""}
+                </div>
                 """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+#  FOOTER
+# ─────────────────────────────────────────────
+st.markdown("""
+<div class="footer">
+    🍽️ Jade's Cuisine · Ibadan, Oyo State<br>
+    © 2026 All rights reserved
+</div>
+""", unsafe_allow_html=True)
