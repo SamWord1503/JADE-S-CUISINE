@@ -4,6 +4,8 @@ from datetime import datetime, date
 import json
 import os
 from twilio.rest import Client
+import gspread
+from google.oauth2.service_account import Credentials
 
 # ─────────────────────────────────────────────
 #  PAGE CONFIG
@@ -29,11 +31,9 @@ html, body, [class*="css"] {
     color: #F0EBE1;
 }
 
-/* Hide streamlit default elements */
 #MainMenu, footer, header { visibility: hidden; }
 .block-container { padding: 0 1rem 2rem 1rem !important; max-width: 480px !important; margin: 0 auto !important; }
 
-/* ── HERO ── */
 .hero {
     background: linear-gradient(160deg, #1A1208 0%, #0D0D0D 60%);
     border-bottom: 1px solid #2A2218;
@@ -43,7 +43,6 @@ html, body, [class*="css"] {
 }
 .hero-badge {
     display: inline-block;
-    font-family: 'DM Sans', sans-serif;
     font-size: 0.65rem;
     font-weight: 600;
     letter-spacing: 0.2em;
@@ -63,41 +62,8 @@ html, body, [class*="css"] {
     margin-bottom: 0.4rem;
 }
 .hero-title span { color: #C9A84C; }
-.hero-sub {
-    font-size: 0.85rem;
-    color: #888;
-    letter-spacing: 0.05em;
-}
+.hero-sub { font-size: 0.85rem; color: #888; letter-spacing: 0.05em; }
 
-/* ── NAV TABS ── */
-.nav-container {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    background: #141414;
-    padding: 6px;
-    border-radius: 14px;
-    border: 1px solid #222;
-}
-.nav-btn {
-    flex: 1;
-    text-align: center;
-    padding: 10px 6px;
-    border-radius: 10px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: #666;
-    background: transparent;
-    border: none;
-}
-.nav-btn.active {
-    background: #C9A84C;
-    color: #0D0D0D;
-}
-
-/* ── CARDS ── */
 .card {
     background: #141414;
     border: 1px solid #222;
@@ -121,13 +87,8 @@ html, body, [class*="css"] {
     margin-bottom: 0.5rem;
     line-height: 1.2;
 }
-.card-sub {
-    font-size: 0.85rem;
-    color: #666;
-    line-height: 1.5;
-}
+.card-sub { font-size: 0.85rem; color: #666; line-height: 1.5; }
 
-/* ── FORM INPUTS ── */
 .stTextInput input, .stTextArea textarea, .stSelectbox select {
     background: #1A1A1A !important;
     border: 1px solid #2A2A2A !important;
@@ -137,13 +98,8 @@ html, body, [class*="css"] {
     font-size: 0.95rem !important;
     padding: 0.75rem 1rem !important;
 }
-.stTextInput input:focus, .stTextArea textarea:focus {
-    border-color: #C9A84C !important;
-    box-shadow: 0 0 0 2px #C9A84C22 !important;
-}
 label { color: #AAA !important; font-size: 0.8rem !important; font-weight: 500 !important; }
 
-/* ── BUTTON ── */
 div[data-testid="stButton"] > button {
     width: 100%;
     background: #C9A84C;
@@ -154,16 +110,10 @@ div[data-testid="stButton"] > button {
     font-family: 'DM Sans', sans-serif;
     font-weight: 600;
     font-size: 0.95rem;
-    letter-spacing: 0.03em;
     margin-top: 0.5rem;
-    transition: all 0.2s;
 }
-div[data-testid="stButton"] > button:hover {
-    background: #B8933A;
-    transform: translateY(-1px);
-}
+div[data-testid="stButton"] > button:hover { background: #B8933A; }
 
-/* ── QUOTE BOX ── */
 .quote-result {
     background: linear-gradient(135deg, #1A1208, #141414);
     border: 1px solid #C9A84C44;
@@ -179,11 +129,7 @@ div[data-testid="stButton"] > button:hover {
     line-height: 1;
     margin: 0.5rem 0;
 }
-.quote-detail {
-    font-size: 0.8rem;
-    color: #666;
-    line-height: 1.8;
-}
+.quote-detail { font-size: 0.8rem; color: #666; line-height: 1.8; }
 .discount-tag {
     display: inline-block;
     background: #C9A84C22;
@@ -195,7 +141,6 @@ div[data-testid="stButton"] > button:hover {
     margin-top: 0.5rem;
 }
 
-/* ── SUCCESS BOX ── */
 .success-box {
     background: #0A1A0A;
     border: 1px solid #2A5A2A;
@@ -213,7 +158,6 @@ div[data-testid="stButton"] > button:hover {
 }
 .success-msg { font-size: 0.82rem; color: #666; }
 
-/* ── PRICE TABLE ── */
 .price-row {
     display: flex;
     justify-content: space-between;
@@ -226,7 +170,6 @@ div[data-testid="stButton"] > button:hover {
 .price-event { color: #CCC; }
 .price-amount { color: #C9A84C; font-weight: 600; }
 
-/* ── DISCOUNT TIERS ── */
 .tier-row {
     display: flex;
     justify-content: space-between;
@@ -237,7 +180,6 @@ div[data-testid="stButton"] > button:hover {
 }
 .tier-row:last-child { border-bottom: none; }
 
-/* ── METRIC CARDS ── */
 .metric-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -259,30 +201,10 @@ div[data-testid="stButton"] > button:hover {
 }
 .metric-label { font-size: 0.72rem; color: #666; margin-top: 2px; }
 
-/* ── ORDER CARD ── */
-.order-card {
-    background: #141414;
-    border: 1px solid #222;
-    border-radius: 14px;
-    padding: 1.2rem;
-    margin-bottom: 0.75rem;
-}
-.order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.75rem;
-}
-.order-ref { font-size: 0.72rem; color: #555; font-weight: 600; letter-spacing: 0.1em; }
-.order-name { font-size: 1rem; font-weight: 600; color: #F0EBE1; margin-top: 2px; }
-.order-event { font-size: 0.8rem; color: #888; margin-top: 1px; }
 .badge-urgent { background: #3A0A0A; color: #FF6B6B; font-size: 0.68rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #FF6B6B44; }
 .badge-soon { background: #2A1E0A; color: #FFB347; font-size: 0.68rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #FFB34744; }
 .badge-ok { background: #0A1E0A; color: #69DB7C; font-size: 0.68rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #69DB7C44; }
-.order-details { font-size: 0.8rem; color: #666; line-height: 1.8; }
-.order-total { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; color: #C9A84C; font-weight: 700; margin-top: 0.5rem; }
 
-/* ── CONTACT & BANK ── */
 .contact-item {
     display: flex;
     align-items: center;
@@ -296,7 +218,6 @@ div[data-testid="stButton"] > button:hover {
 .contact-label { font-size: 0.68rem; color: #555; text-transform: uppercase; letter-spacing: 0.1em; }
 .contact-value { color: #CCC; margin-top: 1px; }
 
-/* ── FOOTER ── */
 .footer {
     text-align: center;
     padding: 2rem 1rem 1rem;
@@ -306,29 +227,60 @@ div[data-testid="stButton"] > button:hover {
     margin-top: 2rem;
 }
 
-/* ── PASSWORD ── */
-.stTextInput input[type="password"] {
-    background: #1A1A1A !important;
-    border: 1px solid #2A2A2A !important;
-    border-radius: 10px !important;
-    color: #F0EBE1 !important;
-}
-
-/* Radio hide */
 div[data-testid="stRadio"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
-#  TWILIO
+#  GOOGLE SHEETS CONNECTION
+# ─────────────────────────────────────────────
+def get_sheet():
+    try:
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+            scopes=scopes
+        )
+        client = gspread.authorize(creds)
+        sheet = client.open_by_key(st.secrets["SHEET_ID"]).sheet1
+        return sheet
+    except Exception as e:
+        return None
+
+def load_orders():
+    sheet = get_sheet()
+    if sheet is None:
+        return []
+    try:
+        records = sheet.get_all_records()
+        return records
+    except:
+        return []
+
+def save_order(order):
+    sheet = get_sheet()
+    if sheet is None:
+        return
+    try:
+        row = [
+            order["id"], order["client_name"], order["phone"],
+            order["email"], order["event_type"], order["event_date"],
+            order["guests"], order["location"], order["special_requests"],
+            order["subtotal"], order["discount_rate"], order["discount_amount"],
+            order["total"], order["status"], order["booked_on"]
+        ]
+        sheet.append_row(row)
+    except Exception as e:
+        st.error(f"Could not save order: {e}")
+
+
+# ─────────────────────────────────────────────
+#  TWILIO WHATSAPP NOTIFICATION
 # ─────────────────────────────────────────────
 def send_whatsapp_notification(order):
     try:
-        TWILIO_SID = st.secrets["TWILIO_SID"]
-        TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
-        NOTIFY_NUMBER = st.secrets["NOTIFY_NUMBER"]
-        client = Client(TWILIO_SID, TWILIO_TOKEN)
+        client = Client(st.secrets["TWILIO_SID"], st.secrets["TWILIO_TOKEN"])
         message = f"""🍽️ NEW ORDER — Jade's Cuisine
 
 Client: {order['client_name']}
@@ -341,26 +293,18 @@ Special Requests: {order['special_requests'] or 'None'}
 
 Total: ₦{order['total']:,.0f}
 Ref: {order['id']}"""
-        client.messages.create(body=message, from_="whatsapp:+14155238886", to=NOTIFY_NUMBER)
+        client.messages.create(
+            body=message,
+            from_="whatsapp:+14155238886",
+            to=st.secrets["NOTIFY_NUMBER"]
+        )
     except:
         pass
 
 
 # ─────────────────────────────────────────────
-#  DATA
+#  PRICING LOGIC
 # ─────────────────────────────────────────────
-DATA_FILE = "orders.json"
-
-def load_orders():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    return []
-
-def save_orders(orders):
-    with open(DATA_FILE, "w") as f:
-        json.dump(orders, f, indent=2)
-
 PRICING = {
     "Wedding": 5000,
     "Birthday Party": 3500,
@@ -376,7 +320,7 @@ def calculate_price(event_type, guests):
     return subtotal, discount, discount_amount, subtotal - discount_amount
 
 def urgency(event_date_str):
-    days_left = (datetime.strptime(event_date_str, "%Y-%m-%d").date() - date.today()).days
+    days_left = (datetime.strptime(str(event_date_str), "%Y-%m-%d").date() - date.today()).days
     if days_left <= 3:
         return "urgent", days_left
     elif days_left <= 7:
@@ -385,7 +329,7 @@ def urgency(event_date_str):
 
 
 # ─────────────────────────────────────────────
-#  SESSION STATE FOR NAV
+#  SESSION STATE
 # ─────────────────────────────────────────────
 if "page" not in st.session_state:
     st.session_state.page = "order"
@@ -404,7 +348,7 @@ st.markdown("""
 
 
 # ─────────────────────────────────────────────
-#  NAV BUTTONS
+#  NAVIGATION
 # ─────────────────────────────────────────────
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -449,8 +393,9 @@ if page == "order":
                 st.error("Please fill in all required fields.")
             else:
                 subtotal, discount_rate, discount_amt, total = calculate_price(event_type, guests)
+                orders = load_orders()
                 new_order = {
-                    "id": f"ORD{len(load_orders()) + 1:04d}",
+                    "id": f"ORD{len(orders) + 1:04d}",
                     "client_name": client_name,
                     "phone": phone,
                     "email": email,
@@ -466,9 +411,7 @@ if page == "order":
                     "status": "Pending",
                     "booked_on": str(date.today())
                 }
-                orders = load_orders()
-                orders.append(new_order)
-                save_orders(orders)
+                save_order(new_order)
                 send_whatsapp_notification(new_order)
 
                 st.markdown(f"""
@@ -500,33 +443,21 @@ elif page == "quote":
 
     if st.button("Calculate Price"):
         subtotal, discount_rate, discount_amt, total = calculate_price(q_event, q_guests)
-        discount_text = f'<div class="discount-tag">🎉 {int(discount_rate*100)}% volume discount applied — you save ₦{discount_amt:,.0f}</div>' if discount_rate > 0 else ""
+        discount_text = f'<div class="discount-tag">🎉 {int(discount_rate*100)}% volume discount — you save ₦{discount_amt:,.0f}</div>' if discount_rate > 0 else ""
         st.markdown(f"""
         <div class="quote-result">
             <div style="font-size:0.72rem;color:#555;letter-spacing:0.1em;text-transform:uppercase;">Your Estimate</div>
             <div class="quote-amount">₦{total:,.0f}</div>
-            <div class="quote-detail">
-                {q_event} · {q_guests} guests<br>
-                ₦{PRICING[q_event]:,} per head
-            </div>
+            <div class="quote-detail">{q_event} · {q_guests} guests · ₦{PRICING[q_event]:,}/head</div>
             {discount_text}
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="card">
-        <div class="card-label">Price Guide</div>
-    """, unsafe_allow_html=True)
-
+    st.markdown('<div class="card"><div class="card-label">Price Guide</div>', unsafe_allow_html=True)
     for event, price in PRICING.items():
-        st.markdown(f"""
-        <div class="price-row">
-            <span class="price-event">{event}</span>
-            <span class="price-amount">₦{price:,}/head</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="price-row"><span class="price-event">{event}</span><span class="price-amount">₦{price:,}/head</span></div>', unsafe_allow_html=True)
 
     st.markdown("""
         <br>
@@ -536,7 +467,6 @@ elif page == "quote":
     </div>
     """, unsafe_allow_html=True)
 
-    # Contact & Bank
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
     <div class="card">
@@ -552,7 +482,7 @@ elif page == "quote":
             <div class="contact-icon">📘</div>
             <div>
                 <div class="contact-label">Facebook</div>
-                <div class="contact-value">Jade's Cuisine</div>
+                <div class="contact-value"><a href="https://www.facebook.com/iyiolasamuel.olatunji" style="color:#C9A84C;text-decoration:none;">Visit our Facebook page</a></div>
             </div>
         </div>
         <div class="contact-item">
@@ -597,9 +527,9 @@ elif page == "admin":
         st.info("No orders yet.")
     else:
         total_orders = len(orders)
-        total_revenue = sum(o["total"] for o in orders)
-        upcoming = [o for o in orders if (datetime.strptime(o["event_date"], "%Y-%m-%d").date() - date.today()).days >= 0]
-        urgent_count = len([o for o in upcoming if (datetime.strptime(o["event_date"], "%Y-%m-%d").date() - date.today()).days <= 3])
+        total_revenue = sum(float(o["total"]) for o in orders)
+        upcoming = [o for o in orders if (datetime.strptime(str(o["event_date"]), "%Y-%m-%d").date() - date.today()).days >= 0]
+        urgent_count = len([o for o in upcoming if (datetime.strptime(str(o["event_date"]), "%Y-%m-%d").date() - date.today()).days <= 3])
 
         st.markdown(f"""
         <div class="metric-grid">
@@ -624,7 +554,7 @@ elif page == "admin":
 
         st.markdown('<div style="font-size:0.72rem;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;">All Orders — Sorted by Date</div>', unsafe_allow_html=True)
 
-        sorted_orders = sorted(orders, key=lambda x: x["event_date"])
+        sorted_orders = sorted(orders, key=lambda x: str(x["event_date"]))
 
         for o in sorted_orders:
             status, days_left = urgency(o["event_date"])
@@ -639,27 +569,10 @@ elif page == "admin":
                 st.markdown(f"""
                 <div style="padding:0.5rem 0">
                     {badge}
-                    <div class="order-details" style="margin-top:0.75rem">
+                    <div style="margin-top:0.75rem;font-size:0.8rem;color:#666;line-height:1.8">
                         <b style="color:#AAA">Client:</b> {o['client_name']}<br>
                         <b style="color:#AAA">Phone:</b> {o['phone']}<br>
                         <b style="color:#AAA">Email:</b> {o['email'] or '—'}<br>
                         <b style="color:#AAA">Event:</b> {o['event_type']}<br>
                         <b style="color:#AAA">Date:</b> {o['event_date']}<br>
                         <b style="color:#AAA">Guests:</b> {o['guests']}<br>
-                        <b style="color:#AAA">Venue:</b> {o['location']}<br>
-                        <b style="color:#AAA">Requests:</b> {o['special_requests'] or '—'}
-                    </div>
-                    <div class="order-total">₦{o['total']:,.0f}</div>
-                    {"<div style='font-size:0.72rem;color:#555'>Includes " + str(int(o['discount_rate']*100)) + "% discount</div>" if o['discount_rate'] > 0 else ""}
-                </div>
-                """, unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────
-#  FOOTER
-# ─────────────────────────────────────────────
-st.markdown("""
-<div class="footer">
-    🍽️ Jade's Cuisine · Ibadan, Oyo State<br>
-    © 2026 All rights reserved
-</div>
-""", unsafe_allow_html=True)
