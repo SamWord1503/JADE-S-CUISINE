@@ -64,7 +64,7 @@ def get_sheet():
         scopes = ["https://www.googleapis.com/auth/spreadsheets"]
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         client = gspread.authorize(creds)
-        return client.open_by_key(st.secrets["SHEET_ID"]).sheet1
+        return client.open_by_url("https://docs.google.com/spreadsheets/d/" + st.secrets["SHEET_ID"]).sheet1
     except Exception as e:
         st.error("Sheet connection error: " + str(e))
         return None
