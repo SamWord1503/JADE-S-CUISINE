@@ -1,3 +1,5 @@
 streamlit
 pandas
 twilio
+gspread
+google-auth
