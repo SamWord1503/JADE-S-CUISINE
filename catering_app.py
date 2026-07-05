@@ -49,7 +49,7 @@ div[data-testid="stButton"] > button:hover { background: #B8933A; }
 .badge-ok { background: #0A1E0A; color: #69DB7C; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; border: 1px solid #69DB7C44; }
 .contact-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 0; border-bottom: 1px solid #1E1E1E; font-size: 0.88rem; }
 .contact-item:last-child { border-bottom: none; }
-.contact-icon { font-size: 1.2rem; width: 2rem; text-align: center; }
+.contact-icon { font-size: 1.4rem; width: 2.5rem; text-align: center; flex-shrink: 0; }
 .contact-label { font-size: 0.68rem; color: #555; text-transform: uppercase; letter-spacing: 0.1em; }
 .contact-value { color: #CCC; margin-top: 1px; }
 .footer { text-align: center; padding: 2rem 1rem 1rem; font-size: 0.72rem; color: #333; border-top: 1px solid #1A1A1A; margin-top: 2rem; }
@@ -58,14 +58,15 @@ div[data-testid="stRadio"] { display: none !important; }
 """, unsafe_allow_html=True)
 
 
-# Google Sheets
+# Google Sheets - with visible error for debugging
 def get_sheet():
     try:
         scopes = ["https://www.googleapis.com/auth/spreadsheets"]
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         client = gspread.authorize(creds)
         return client.open_by_key(st.secrets["SHEET_ID"]).sheet1
-    except:
+    except Exception as e:
+        st.error("Sheet connection error: " + str(e))
         return None
 
 def load_orders():
@@ -74,13 +75,14 @@ def load_orders():
         return []
     try:
         return sheet.get_all_records()
-    except:
+    except Exception as e:
+        st.error("Load error: " + str(e))
         return []
 
 def save_order(order):
     sheet = get_sheet()
     if sheet is None:
-        return
+        return False
     try:
         row = [
             order["id"], order["client_name"], order["phone"], order["email"],
@@ -89,8 +91,10 @@ def save_order(order):
             order["discount_amount"], order["total"], order["status"], order["booked_on"]
         ]
         sheet.append_row(row)
+        return True
     except Exception as e:
-        st.error(f"Could not save order: {e}")
+        st.error("Save error: " + str(e))
+        return False
 
 
 # Twilio
@@ -189,7 +193,7 @@ if page == "order":
                 subtotal, discount_rate, discount_amt, total = calculate_price(event_type, guests)
                 orders = load_orders()
                 new_order = {
-                    "id": f"ORD{len(orders) + 1:04d}",
+                    "id": "ORD" + str(len(orders) + 1).zfill(4),
                     "client_name": client_name,
                     "phone": phone,
                     "email": email,
@@ -205,25 +209,24 @@ if page == "order":
                     "status": "Pending",
                     "booked_on": str(date.today())
                 }
-                save_order(new_order)
-                send_whatsapp_notification(new_order)
-
-                discount_note = ""
-                if discount_rate == 0.10:
-                    discount_note = "<br><small style='color:#555'>10% discount applied</small>"
-                elif discount_rate == 0.05:
-                    discount_note = "<br><small style='color:#555'>5% discount applied</small>"
-
-                st.markdown(
-                    "<div class='success-box'>"
-                    "<div style='font-size:2rem'>OK</div>"
-                    "<div class='success-ref'>" + new_order['id'] + "</div>"
-                    "<div class='success-msg'>Booking received! We will contact you shortly to confirm.<br><br>"
-                    "<b style='color:#C9A84C'>Total: N" + f"{total:,.0f}" + "</b>"
-                    + discount_note +
-                    "</div></div>",
-                    unsafe_allow_html=True
-                )
+                saved = save_order(new_order)
+                if saved:
+                    send_whatsapp_notification(new_order)
+                    discount_note = ""
+                    if discount_rate == 0.10:
+                        discount_note = "<br><small style='color:#555'>10% discount applied</small>"
+                    elif discount_rate == 0.05:
+                        discount_note = "<br><small style='color:#555'>5% discount applied</small>"
+                    st.markdown(
+                        "<div class='success-box'>"
+                        "<div style='font-size:2rem'>&#10003;</div>"
+                        "<div class='success-ref'>" + new_order['id'] + "</div>"
+                        "<div class='success-msg'>Booking received! We will contact you shortly to confirm.<br><br>"
+                        "<b style='color:#C9A84C'>Total: N" + f"{total:,.0f}" + "</b>"
+                        + discount_note +
+                        "</div></div>",
+                        unsafe_allow_html=True
+                    )
 
 
 # PAGE 2 - GET QUOTE
@@ -273,28 +276,28 @@ elif page == "quote":
     <div class="card">
         <div class="card-label">Contact and Payment</div>
         <div class="contact-item">
-            <div class="contact-icon">Tel</div>
+            <div class="contact-icon">&#128222;</div>
             <div>
                 <div class="contact-label">Phone / WhatsApp</div>
                 <div class="contact-value">09032803609</div>
             </div>
         </div>
         <div class="contact-item">
-            <div class="contact-icon">FB</div>
+            <div class="contact-icon">&#128276;</div>
             <div>
                 <div class="contact-label">Facebook</div>
                 <div class="contact-value"><a href="https://www.facebook.com/iyiolasamuel.olatunji" style="color:#C9A84C;text-decoration:none;">Visit our Facebook page</a></div>
             </div>
         </div>
         <div class="contact-item">
-            <div class="contact-icon">Pin</div>
+            <div class="contact-icon">&#128205;</div>
             <div>
                 <div class="contact-label">Location</div>
                 <div class="contact-value">Ibadan, Oyo State</div>
             </div>
         </div>
         <div class="contact-item">
-            <div class="contact-icon">Bank</div>
+            <div class="contact-icon">&#127981;</div>
             <div>
                 <div class="contact-label">Bank - Opay</div>
                 <div class="contact-value">9032803609</div>
