@@ -61,7 +61,10 @@ div[data-testid="stRadio"] { display: none !important; }
 # Google Sheets - with visible error for debugging
 def get_sheet():
     try:
-        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        scopes = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         client = gspread.authorize(creds)
         return client.open_by_url("https://docs.google.com/spreadsheets/d/" + st.secrets["SHEET_ID"]).sheet1
