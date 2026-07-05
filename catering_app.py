@@ -58,16 +58,17 @@ div[data-testid="stRadio"] { display: none !important; }
 """, unsafe_allow_html=True)
 
 
-# Google Sheets - with visible error for debugging
+# Google Sheets - using JSON string approach
 def get_sheet():
     try:
+        creds_dict = json.loads(st.secrets["GOOGLE_CREDS"])
         scopes = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
-        creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         client = gspread.authorize(creds)
-        return client.open_by_url("https://docs.google.com/spreadsheets/d/" + st.secrets["SHEET_ID"]).sheet1
+        return client.open_by_key(st.secrets["SHEET_ID"]).sheet1
     except Exception as e:
         st.error("Sheet connection error: " + str(e))
         return None
@@ -286,7 +287,7 @@ elif page == "quote":
             </div>
         </div>
         <div class="contact-item">
-            <div class="contact-icon">&#128276;</div>
+            <div class="contact-icon">&#128100;</div>
             <div>
                 <div class="contact-label">Facebook</div>
                 <div class="contact-value"><a href="https://www.facebook.com/iyiolasamuel.olatunji" style="color:#C9A84C;text-decoration:none;">Visit our Facebook page</a></div>
