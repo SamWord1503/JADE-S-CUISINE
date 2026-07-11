@@ -4,8 +4,7 @@ from datetime import datetime, date
 import json
 import os
 from twilio.rest import Client
-import gspread
-from google.oauth2.service_account import Credentials
+import requests
 
 st.set_page_config(page_title="Jade's Cuisine", page_icon="dish", layout="centered")
 
@@ -58,44 +57,43 @@ div[data-testid="stRadio"] { display: none !important; }
 """, unsafe_allow_html=True)
 
 
-# Google Sheets - using JSON string approach
-def get_sheet():
-    try:
-        creds_dict = json.loads(st.secrets["GOOGLE_CREDS"])
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-        client = gspread.authorize(creds)
-        return client.open_by_key(st.secrets["SHEET_ID"]).sheet1
-    except Exception as e:
-        st.error("Sheet connection error: " + str(e))
-        return None
+# Supabase connection
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+}
 
 def load_orders():
-    sheet = get_sheet()
-    if sheet is None:
-        return []
     try:
-        return sheet.get_all_records()
+        response = requests.get(
+            SUPABASE_URL + "/rest/v1/orders?select=*&order=event_date.asc",
+            headers=HEADERS
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error("Load error: " + str(response.text))
+            return []
     except Exception as e:
         st.error("Load error: " + str(e))
         return []
 
 def save_order(order):
-    sheet = get_sheet()
-    if sheet is None:
-        return False
     try:
-        row = [
-            order["id"], order["client_name"], order["phone"], order["email"],
-            order["event_type"], order["event_date"], order["guests"], order["location"],
-            order["special_requests"], order["subtotal"], order["discount_rate"],
-            order["discount_amount"], order["total"], order["status"], order["booked_on"]
-        ]
-        sheet.append_row(row)
-        return True
+        response = requests.post(
+            SUPABASE_URL + "/rest/v1/orders",
+            headers=HEADERS,
+            json=order
+        )
+        if response.status_code in [200, 201]:
+            return True
+        else:
+            st.error("Save error: " + str(response.text))
+            return False
     except Exception as e:
         st.error("Save error: " + str(e))
         return False
@@ -349,9 +347,7 @@ elif page == "admin":
 
         st.markdown("<div style='font-size:0.72rem;color:#555;text-transform:uppercase;margin-bottom:0.75rem;'>All Orders - Sorted by Date</div>", unsafe_allow_html=True)
 
-        sorted_orders = sorted(orders, key=lambda x: str(x["event_date"]))
-
-        for o in sorted_orders:
+        for o in orders:
             status, days_left = urgency(o["event_date"])
             if status == "urgent":
                 badge = "<span class='badge-urgent'>URGENT - " + str(days_left) + " days left</span>"
