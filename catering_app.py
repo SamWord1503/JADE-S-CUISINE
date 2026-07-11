@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime, date
 import json
 import os
+import random
+import string
 from twilio.rest import Client
 import requests
 
@@ -67,6 +69,10 @@ HEADERS = {
     "Prefer": "return=minimal"
 }
 
+def generate_order_id():
+    chars = string.ascii_uppercase + string.digits
+    return "JC-" + ''.join(random.choices(chars, k=6))
+
 def load_orders():
     try:
         response = requests.get(
@@ -104,14 +110,14 @@ def send_whatsapp_notification(order):
     try:
         client = Client(st.secrets["TWILIO_SID"], st.secrets["TWILIO_TOKEN"])
         msg = "NEW ORDER - Jade's Cuisine\n\n"
+        msg += "Ref: " + str(order['id']) + "\n"
         msg += "Client: " + str(order['client_name']) + "\n"
         msg += "Phone: " + str(order['phone']) + "\n"
         msg += "Event: " + str(order['event_type']) + "\n"
         msg += "Date: " + str(order['event_date']) + "\n"
         msg += "Guests: " + str(order['guests']) + "\n"
         msg += "Location: " + str(order['location']) + "\n"
-        msg += "Total: N" + str(f"{order['total']:,.0f}") + "\n"
-        msg += "Ref: " + str(order['id'])
+        msg += "Total: N" + str(f"{order['total']:,.0f}")
         client.messages.create(body=msg, from_="whatsapp:+14155238886", to=st.secrets["NOTIFY_NUMBER"])
     except:
         pass
@@ -193,9 +199,8 @@ if page == "order":
                 st.error("Please fill in all required fields.")
             else:
                 subtotal, discount_rate, discount_amt, total = calculate_price(event_type, guests)
-                orders = load_orders()
                 new_order = {
-                    "id": "ORD" + str(len(orders) + 1).zfill(4),
+                    "id": generate_order_id(),
                     "client_name": client_name,
                     "phone": phone,
                     "email": email,
