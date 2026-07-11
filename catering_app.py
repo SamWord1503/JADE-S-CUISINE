@@ -195,7 +195,7 @@ if page == "order":
                 subtotal, discount_rate, discount_amt, total = calculate_price(event_type, guests)
                 orders = load_orders()
                 new_order = {
-                    "id": "JC-" + ''.join(_import_('random').choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=6)),
+                    "id": "ORD" + str(len(orders) + 1).zfill(4),
                     "client_name": client_name,
                     "phone": phone,
                     "email": email,
