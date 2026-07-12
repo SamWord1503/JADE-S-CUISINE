@@ -26,6 +26,7 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; background-colo
 .card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: #F0EBE1; margin-bottom: 0.5rem; }
 .card-sub { font-size: 0.85rem; color: #666; line-height: 1.5; }
 .stTextInput input, .stTextArea textarea { background: #1A1A1A !important; border: 1px solid #2A2A2A !important; border-radius: 10px !important; color: #F0EBE1 !important; }
+.stTextInput input:focus, .stTextArea textarea:focus { border-color: #C9A84C !important; }
 label { color: #AAA !important; font-size: 0.8rem !important; }
 div[data-testid="stButton"] > button { width: 100%; background: #C9A84C; color: #0D0D0D; border: none; border-radius: 12px; padding: 0.9rem 2rem; font-weight: 600; font-size: 0.95rem; margin-top: 0.5rem; }
 div[data-testid="stButton"] > button:hover { background: #B8933A; }
@@ -43,7 +44,7 @@ div[data-testid="stButton"] > button:hover { background: #B8933A; }
 .tier-row:last-child { border-bottom: none; }
 .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
 .metric-card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 1rem; text-align: center; }
-.metric-value { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 700; color: #C9A84C; }
+.metric-value { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 700; color: #C9A84C; }
 .metric-label { font-size: 0.72rem; color: #666; }
 .badge-urgent { background: #3A0A0A; color: #FF6B6B; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; border: 1px solid #FF6B6B44; }
 .badge-soon { background: #2A1E0A; color: #FFB347; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; border: 1px solid #FFB34744; }
@@ -55,6 +56,10 @@ div[data-testid="stButton"] > button:hover { background: #B8933A; }
 .contact-value { color: #CCC; margin-top: 1px; }
 .footer { text-align: center; padding: 2rem 1rem 1rem; font-size: 0.72rem; color: #333; border-top: 1px solid #1A1A1A; margin-top: 2rem; }
 div[data-testid="stRadio"] { display: none !important; }
+/* Hide press enter hints */
+.stTextInput > div > div > div > div[data-baseweb="input"] > div:last-child { display: none !important; }
+input[aria-describedby] + div { display: none !important; }
+[data-testid="InputInstructions"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -184,14 +189,14 @@ if page == "order":
     """, unsafe_allow_html=True)
 
     with st.form("order_form"):
-        client_name = st.text_input("Full Name *")
-        phone = st.text_input("Phone Number *")
-        email = st.text_input("Email Address (optional)")
+        client_name = st.text_input("Full Name *", placeholder="Enter your full name")
+        phone = st.text_input("Phone Number *", placeholder="e.g. 08012345678")
+        email = st.text_input("Email Address (optional)", placeholder="e.g. you@email.com")
         event_type = st.selectbox("Type of Event *", list(PRICING.keys()))
         event_date = st.date_input("Event Date *", min_value=date.today())
         guests = st.number_input("Number of Guests *", min_value=1, max_value=5000, value=50, step=10)
-        location = st.text_input("Event Venue / Location *")
-        special_requests = st.text_area("Special Requests", placeholder="e.g. Jollof rice, Fried rice, Chicken, Beef...")
+        location = st.text_area("Event Venue / Location *", placeholder="Enter your event venue or location", height=80)
+        special_requests = st.text_area("Special Requests", placeholder="e.g. Jollof rice, Fried rice, Chicken, Beef...", height=100)
         submitted = st.form_submit_button("Submit Booking")
 
         if submitted:
@@ -324,7 +329,8 @@ elif page == "admin":
     </div>
     """, unsafe_allow_html=True)
 
-    password = st.text_input("Enter password", type="password", placeholder="Admin password")
+    password = st.text_input("Enter password", type="password", placeholder="Admin password", label_visibility="collapsed")
+    st.markdown("<div style='font-size:0.75rem;color:#555;margin-top:-0.5rem;margin-bottom:0.5rem;'>Enter admin password</div>", unsafe_allow_html=True)
 
     if password != "Jade2026":
         st.warning("Enter the correct password to access the dashboard.")
@@ -343,7 +349,7 @@ elif page == "admin":
         st.markdown(
             "<div class='metric-grid'>"
             "<div class='metric-card'><div class='metric-value'>" + str(total_orders) + "</div><div class='metric-label'>Total Orders</div></div>"
-            "<div class='metric-card'><div class='metric-value'>N" + f"{total_revenue/1000:.0f}" + "k</div><div class='metric-label'>Total Revenue</div></div>"
+            "<div class='metric-card'><div class='metric-value'>N" + f"{total_revenue:,.0f}" + "</div><div class='metric-label'>Total Revenue</div></div>"
             "<div class='metric-card'><div class='metric-value'>" + str(len(upcoming)) + "</div><div class='metric-label'>Upcoming</div></div>"
             "<div class='metric-card'><div class='metric-value' style='color:#FF6B6B'>" + str(urgent_count) + "</div><div class='metric-label'>Urgent (3 days)</div></div>"
             "</div>",
