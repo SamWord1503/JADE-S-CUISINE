@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date
-import json
-import os
 import random
 import string
 from twilio.rest import Client
@@ -26,7 +24,6 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; background-colo
 .card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: #F0EBE1; margin-bottom: 0.5rem; }
 .card-sub { font-size: 0.85rem; color: #666; line-height: 1.5; }
 .stTextInput input, .stTextArea textarea { background: #1A1A1A !important; border: 1px solid #2A2A2A !important; border-radius: 10px !important; color: #F0EBE1 !important; }
-.stTextInput input:focus, .stTextArea textarea:focus { border-color: #C9A84C !important; }
 label { color: #AAA !important; font-size: 0.8rem !important; }
 div[data-testid="stButton"] > button { width: 100%; background: #C9A84C; color: #0D0D0D; border: none; border-radius: 12px; padding: 0.9rem 2rem; font-weight: 600; font-size: 0.95rem; margin-top: 0.5rem; }
 div[data-testid="stButton"] > button:hover { background: #B8933A; }
@@ -42,13 +39,6 @@ div[data-testid="stButton"] > button:hover { background: #B8933A; }
 .price-amount { color: #C9A84C; font-weight: 600; }
 .tier-row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.82rem; color: #666; border-bottom: 1px solid #1A1A1A; }
 .tier-row:last-child { border-bottom: none; }
-.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
-.metric-card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 1rem; text-align: center; }
-.metric-value { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 700; color: #C9A84C; }
-.metric-label { font-size: 0.72rem; color: #666; }
-.badge-urgent { background: #3A0A0A; color: #FF6B6B; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; border: 1px solid #FF6B6B44; }
-.badge-soon { background: #2A1E0A; color: #FFB347; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; border: 1px solid #FFB34744; }
-.badge-ok { background: #0A1E0A; color: #69DB7C; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; border: 1px solid #69DB7C44; }
 .contact-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 0; border-bottom: 1px solid #1E1E1E; font-size: 0.88rem; }
 .contact-item:last-child { border-bottom: none; }
 .contact-icon { font-size: 1.4rem; width: 2.5rem; text-align: center; flex-shrink: 0; }
@@ -56,15 +46,12 @@ div[data-testid="stButton"] > button:hover { background: #B8933A; }
 .contact-value { color: #CCC; margin-top: 1px; }
 .footer { text-align: center; padding: 2rem 1rem 1rem; font-size: 0.72rem; color: #333; border-top: 1px solid #1A1A1A; margin-top: 2rem; }
 div[data-testid="stRadio"] { display: none !important; }
-/* Hide press enter hints */
-.stTextInput > div > div > div > div[data-baseweb="input"] > div:last-child { display: none !important; }
-input[aria-describedby] + div { display: none !important; }
 [data-testid="InputInstructions"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
 
-# Supabase connection
+# Supabase
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 HEADERS = {
@@ -86,11 +73,8 @@ def load_orders():
         )
         if response.status_code == 200:
             return response.json()
-        else:
-            st.error("Load error: " + str(response.text))
-            return []
-    except Exception as e:
-        st.error("Load error: " + str(e))
+        return []
+    except:
         return []
 
 def save_order(order):
@@ -100,17 +84,10 @@ def save_order(order):
             headers=HEADERS,
             json=order
         )
-        if response.status_code in [200, 201]:
-            return True
-        else:
-            st.error("Save error: " + str(response.text))
-            return False
-    except Exception as e:
-        st.error("Save error: " + str(e))
+        return response.status_code in [200, 201]
+    except:
         return False
 
-
-# Twilio
 def send_whatsapp_notification(order):
     try:
         client = Client(st.secrets["TWILIO_SID"], st.secrets["TWILIO_TOKEN"])
@@ -127,8 +104,6 @@ def send_whatsapp_notification(order):
     except:
         pass
 
-
-# Pricing
 PRICING = {"Wedding": 5000, "Birthday Party": 3500, "Corporate Event": 6000, "Burial/Funeral": 2500}
 
 def calculate_price(event_type, guests):
@@ -138,19 +113,8 @@ def calculate_price(event_type, guests):
     discount_amount = subtotal * discount
     return subtotal, discount, discount_amount, subtotal - discount_amount
 
-def urgency(event_date_str):
-    days_left = (datetime.strptime(str(event_date_str), "%Y-%m-%d").date() - date.today()).days
-    if days_left <= 3:
-        return "urgent", days_left
-    elif days_left <= 7:
-        return "soon", days_left
-    return "ok", days_left
-
-
-# Session state
 if "page" not in st.session_state:
     st.session_state.page = "order"
-
 
 # Hero
 st.markdown("""
@@ -161,18 +125,14 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-
-# Navigation
-col1, col2, col3 = st.columns(3)
+# Navigation - only 2 tabs for customers
+col1, col2 = st.columns(2)
 with col1:
     if st.button("Book Event", key="nav_order"):
         st.session_state.page = "order"
 with col2:
     if st.button("Get Quote", key="nav_quote"):
         st.session_state.page = "quote"
-with col3:
-    if st.button("Dashboard", key="nav_admin"):
-        st.session_state.page = "admin"
 
 st.markdown("---")
 page = st.session_state.page
@@ -318,73 +278,6 @@ elif page == "quote":
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-
-# PAGE 3 - ADMIN DASHBOARD
-elif page == "admin":
-    st.markdown("""
-    <div class="card">
-        <div class="card-label">Admin Access</div>
-        <div class="card-title">Dashboard</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    password = st.text_input("Enter password", type="password", placeholder="Admin password", label_visibility="collapsed")
-    st.markdown("<div style='font-size:0.75rem;color:#555;margin-top:-0.5rem;margin-bottom:0.5rem;'>Enter admin password</div>", unsafe_allow_html=True)
-
-    if password != "Jade2026":
-        st.warning("Enter the correct password to access the dashboard.")
-        st.stop()
-
-    orders = load_orders()
-
-    if not orders:
-        st.info("No orders yet.")
-    else:
-        total_orders = len(orders)
-        total_revenue = sum(float(o["total"]) for o in orders)
-        upcoming = [o for o in orders if (datetime.strptime(str(o["event_date"]), "%Y-%m-%d").date() - date.today()).days >= 0]
-        urgent_count = len([o for o in upcoming if (datetime.strptime(str(o["event_date"]), "%Y-%m-%d").date() - date.today()).days <= 3])
-
-        st.markdown(
-            "<div class='metric-grid'>"
-            "<div class='metric-card'><div class='metric-value'>" + str(total_orders) + "</div><div class='metric-label'>Total Orders</div></div>"
-            "<div class='metric-card'><div class='metric-value'>N" + f"{total_revenue:,.0f}" + "</div><div class='metric-label'>Total Revenue</div></div>"
-            "<div class='metric-card'><div class='metric-value'>" + str(len(upcoming)) + "</div><div class='metric-label'>Upcoming</div></div>"
-            "<div class='metric-card'><div class='metric-value' style='color:#FF6B6B'>" + str(urgent_count) + "</div><div class='metric-label'>Urgent (3 days)</div></div>"
-            "</div>",
-            unsafe_allow_html=True
-        )
-
-        st.markdown("<div style='font-size:0.72rem;color:#555;text-transform:uppercase;margin-bottom:0.75rem;'>All Orders - Sorted by Date</div>", unsafe_allow_html=True)
-
-        for o in orders:
-            status, days_left = urgency(o["event_date"])
-            if status == "urgent":
-                badge = "<span class='badge-urgent'>URGENT - " + str(days_left) + " days left</span>"
-            elif status == "soon":
-                badge = "<span class='badge-soon'>SOON - In " + str(days_left) + " days</span>"
-            else:
-                badge = "<span class='badge-ok'>OK - In " + str(days_left) + " days</span>"
-
-            with st.expander(str(o['id']) + " - " + str(o['client_name']) + " - " + str(o['event_date'])):
-                st.markdown(
-                    "<div style='padding:0.5rem 0'>" + badge +
-                    "<div style='margin-top:0.75rem;font-size:0.8rem;color:#666;line-height:1.8'>"
-                    "<b style='color:#AAA'>Client:</b> " + str(o['client_name']) + "<br>"
-                    "<b style='color:#AAA'>Phone:</b> " + str(o['phone']) + "<br>"
-                    "<b style='color:#AAA'>Email:</b> " + str(o.get('email') or '-') + "<br>"
-                    "<b style='color:#AAA'>Event:</b> " + str(o['event_type']) + "<br>"
-                    "<b style='color:#AAA'>Date:</b> " + str(o['event_date']) + "<br>"
-                    "<b style='color:#AAA'>Guests:</b> " + str(o['guests']) + "<br>"
-                    "<b style='color:#AAA'>Venue:</b> " + str(o['location']) + "<br>"
-                    "<b style='color:#AAA'>Requests:</b> " + str(o.get('special_requests') or '-') + "<br>"
-                    "</div>"
-                    "<div style='font-family:serif;font-size:1.3rem;color:#C9A84C;font-weight:700;margin-top:0.5rem;'>N" + f"{float(o['total']):,.0f}" + "</div>"
-                    "</div>",
-                    unsafe_allow_html=True
-                )
-
 
 # Footer
 st.markdown("""
