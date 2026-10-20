@@ -103,8 +103,8 @@ def send_whatsapp_notification(order):
         msg += "Location: " + str(order['location']) + "\n"
         msg += "Total: N" + str(f"{order['total']:,.0f}")
         client.messages.create(body=msg, from_="whatsapp:+14155238886", to=st.secrets["NOTIFY_NUMBER"])
-    except:
-        pass
+    except Exception as e:
+        st.warning("WhatsApp alert failed: " + str(e))
 
 PRICING = {"Wedding": 5000, "Birthday Party": 3500, "Corporate Event": 6000, "Burial/Funeral": 2500}
 
